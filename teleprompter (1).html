@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Teleprónter</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #08090d;
+  --card: #10121a;
+  --card2: #181b26;
+  --border: rgba(255,255,255,0.07);
+  --gold: #e8b84b;
+  --gold2: #f5d07a;
+  --amber: #d4722a;
+  --text: #ddd8cc;
+  --muted: #4a4860;
+  --done-text: #6a6550;
+  --r: 16px;
+  --r-sm: 10px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body { height:100%; width:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:'DM Mono',monospace; }
+
+/* ═══ SCREENS ═══ */
+.screen { position:fixed; inset:0; display:flex; flex-direction:column; transition:opacity 0.3s, transform 0.3s; }
+.screen.hidden { opacity:0; pointer-events:none; transform:translateY(20px); }
+
+/* ═══════════════════════════════════
+   SCREEN 1 — INSERCIÓN
+═══════════════════════════════════ */
+#screen-insert { background:var(--bg); overflow-y:auto; -webkit-overflow-scrolling:touch; }
+
+.insert-inner {
+  min-height:100%;
+  display:flex; flex-direction:column;
+  padding: env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);
+  max-width:600px; margin:0 auto; width:100%;
+}
+
+.top-bar { display:flex; align-items:center; justify-content:space-between; padding:18px 20px 14px; flex-shrink:0; }
+.brand { font-family:'DM Serif Display',serif; font-size:1.25rem; color:var(--gold); }
+.brand-sub { font-size:0.62rem; color:var(--muted); font-family:'DM Mono',monospace; margin-top:2px; letter-spacing:0.08em; text-transform:uppercase; }
+.example-btn { padding:7px 14px; border-radius:50px; border:1px solid rgba(232,184,75,0.25); background:transparent; color:var(--gold); font-family:'DM Mono',monospace; font-size:0.7rem; cursor:pointer; }
+
+.input-card { margin:0 16px; background:var(--card); border-radius:var(--r); border:1px solid var(--border); overflow:hidden; flex:1; display:flex; flex-direction:column; min-height:220px; }
+.input-label { padding:12px 16px 10px; font-size:0.65rem; text-transform:uppercase; letter-spacing:0.14em; color:var(--muted); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.input-label::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--gold); opacity:0.6; }
+
+#guion-input { flex:1; background:transparent; border:none; outline:none; color:var(--text); font-family:'DM Mono',monospace; font-size:0.88rem; line-height:1.75; padding:16px; resize:none; caret-color:var(--gold); min-height:180px; -webkit-user-select:text; user-select:text; }
+#guion-input::placeholder { color:var(--muted); opacity:0.7; line-height:1.6; }
+
+.char-info { padding:8px 16px; font-size:0.62rem; color:var(--muted); border-top:1px solid var(--border); display:flex; justify-content:space-between; flex-shrink:0; }
+
+.options-row { padding:14px 16px 10px; display:flex; flex-direction:column; gap:10px; flex-shrink:0; }
+.option-item { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--card); border-radius:var(--r-sm); border:1px solid var(--border); }
+.option-label { font-size:0.78rem; color:var(--text); }
+.option-sub { font-size:0.63rem; color:var(--muted); margin-top:3px; }
+
+.toggle { position:relative; width:44px; height:24px; flex-shrink:0; }
+.toggle input { opacity:0; width:0; height:0; }
+.toggle-track { position:absolute; inset:0; border-radius:12px; background:var(--card2); border:1px solid var(--border); transition:0.25s; cursor:pointer; }
+.toggle input:checked + .toggle-track { background:var(--gold); border-color:var(--gold); }
+.toggle-track::after { content:''; position:absolute; width:18px; height:18px; border-radius:50%; background:white; top:2px; left:2px; transition:0.25s; box-shadow:0 1px 4px rgba(0,0,0,0.3); }
+.toggle input:checked + .toggle-track::after { transform:translateX(20px); }
+
+.slider-row { padding:0 16px 8px; display:flex; align-items:center; gap:12px; flex-shrink:0; }
+.slider-row label { font-size:0.7rem; color:var(--muted); white-space:nowrap; }
+#sensitivity { flex:1; accent-color:var(--gold); height:3px; cursor:pointer; }
+.slider-val { font-size:0.7rem; color:var(--gold); width:14px; text-align:center; }
+
+.cta-area { padding:12px 16px calc(16px + env(safe-area-inset-bottom,0)); flex-shrink:0; }
+.btn-cta { width:100%; padding:16px; border-radius:var(--r); border:none; background:var(--gold); color:#08090d; font-family:'DM Mono',monospace; font-size:0.92rem; font-weight:500; letter-spacing:0.06em; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:all 0.2s; -webkit-appearance:none; }
+.btn-cta:active { transform:scale(0.98); }
+
+.no-speech { padding:10px 16px; background:rgba(212,114,42,0.15); border:1px solid rgba(212,114,42,0.3); border-radius:var(--r-sm); font-size:0.72rem; color:var(--amber); margin:0 16px 12px; line-height:1.6; display:none; }
+
+/* ═══════════════════════════════════
+   SCREEN 2 — TELEPRÓNTER ESTILO SUBTÍTULOS
+═══════════════════════════════════ */
+#screen-prompter { background:#000; }
+
+/* Header */
+.prompter-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding: calc(12px + env(safe-area-inset-top,0)) 16px 12px;
+  background:rgba(0,0,0,0.9);
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  flex-shrink:0; z-index:20; position:relative;
+}
+.ph-left { display:flex; align-items:center; gap:10px; }
+.back-btn { width:34px; height:34px; border-radius:50%; border:1px solid rgba(255,255,255,0.1); background:transparent; color:rgba(255,255,255,0.5); font-size:1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.ph-status { display:flex; align-items:center; gap:7px; font-size:0.68rem; color:rgba(255,255,255,0.4); }
+.ph-dot { width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,0.2); transition:all 0.3s; }
+.ph-dot.on { background:#5de0a0; box-shadow:0 0 6px #5de0a0; animation:blink 1.3s infinite; }
+.ph-dot.pause { background:var(--gold); box-shadow:0 0 6px var(--gold); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+.ph-right { display:flex; gap:8px; align-items:center; }
+.ph-btn { padding:7px 14px; border-radius:50px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.8); font-family:'DM Mono',monospace; font-size:0.7rem; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
+.ph-btn.primary { background:var(--gold); color:#000; border-color:var(--gold); font-weight:500; }
+.ph-btn:active { opacity:0.7; transform:scale(0.95); }
+.font-ctrl { display:flex; gap:4px; }
+.font-btn { width:30px; height:30px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:rgba(255,255,255,0.5); font-family:'DM Mono',monospace; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.font-btn:active { background:rgba(255,255,255,0.1); }
+
+/* Progress */
+.prog-bar { height:2px; background:rgba(255,255,255,0.04); flex-shrink:0; }
+.prog-fill { height:100%; background:linear-gradient(90deg,var(--amber),var(--gold)); width:0; transition:width 0.6s ease; }
+
+/* ═══ SUBTITLE STAGE ═══ */
+.subtitle-stage {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:20px 24px;
+  position:relative;
+  overflow:hidden;
+  background:#000;
+}
+
+/* Three subtitle rows */
+.sub-rows {
+  width:100%;
+  max-width:800px;
+  display:flex;
+  flex-direction:column;
+  gap:0;
+  align-items:center;
+}
+
+.sub-row {
+  width:100%;
+  text-align:center;
+  padding:10px 0;
+  transition: opacity 0.35s ease, transform 0.35s ease, color 0.35s ease;
+  line-height:1.35;
+  font-family:'DM Serif Display',serif;
+  border-radius:8px;
+}
+
+/* PREVIOUS row */
+.sub-row.prev {
+  opacity: 0.22;
+  color: #fff;
+  font-size: var(--sub-prev-size, 1.1rem);
+  transform: translateY(0);
+  padding-bottom: 14px;
+}
+
+/* CURRENT row — the main one */
+.sub-row.curr {
+  opacity: 1;
+  color: var(--gold2);
+  font-size: var(--sub-curr-size, 1.7rem);
+  font-weight: 400;
+  text-shadow: 0 0 40px rgba(232,184,75,0.35), 0 2px 20px rgba(0,0,0,0.8);
+  padding: 10px 16px;
+  position: relative;
+}
+
+/* underline progress for current sentence */
+.sub-row.curr::after {
+  content:'';
+  position:absolute;
+  bottom:4px; left:50%; transform:translateX(-50%);
+  width:40px; height:2px;
+  background:var(--gold);
+  border-radius:2px;
+  opacity:0.6;
+}
+
+/* NEXT row */
+.sub-row.next {
+  opacity: 0.38;
+  color: #fff;
+  font-size: var(--sub-next-size, 1.1rem);
+  transform: translateY(0);
+  padding-top: 14px;
+}
+
+/* Divider lines */
+.sub-divider {
+  width:1px; height:1px;
+  background: transparent;
+}
+
+/* Transition animation when segment changes */
+.sub-rows.animating .sub-row.prev  { animation: slideUp 0.32s ease forwards; }
+.sub-rows.animating .sub-row.curr  { animation: fadeInScale 0.32s ease forwards; }
+.sub-rows.animating .sub-row.next  { animation: fadeInBelow 0.32s ease forwards; }
+
+@keyframes slideUp    { from{opacity:0.4;transform:translateY(8px)} to{opacity:0.22;transform:translateY(0)} }
+@keyframes fadeInScale{ from{opacity:0.6;transform:scale(0.97)} to{opacity:1;transform:scale(1)} }
+@keyframes fadeInBelow{ from{opacity:0;transform:translateY(-6px)} to{opacity:0.38;transform:translateY(0)} }
+
+/* Empty state */
+.sub-empty { text-align:center; color:rgba(255,255,255,0.15); font-size:0.85rem; line-height:1.8; }
+.sub-empty svg { display:block; margin:0 auto 14px; opacity:0.3; }
+
+/* Counter badge */
+.seg-counter {
+  position:absolute;
+  top:14px; left:50%; transform:translateX(-50%);
+  font-size:0.6rem; color:rgba(255,255,255,0.2);
+  letter-spacing:0.1em;
+}
+
+/* Transcript strip */
+.transcript-bar {
+  position:absolute;
+  bottom: calc(10px + env(safe-area-inset-bottom,0));
+  left:20px; right:20px;
+  background:rgba(10,10,20,0.75);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border:1px solid rgba(232,184,75,0.15);
+  border-radius:50px;
+  padding:8px 18px;
+  font-size:0.68rem;
+  color:rgba(255,255,255,0.35);
+  text-align:center;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  transition:opacity 0.3s;
+  z-index:10;
+}
+.transcript-bar.off { opacity:0; pointer-events:none; }
+.transcript-bar em { color:var(--gold); font-style:normal; }
+
+/* Confidence dots */
+.conf-bar { position:absolute; top:12px; right:14px; display:flex; align-items:center; gap:4px; }
+.cdot { width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,0.08); transition:0.3s; }
+.cdot.on { background:var(--gold); }
+
+/* Nav arrows (manual override) */
+.nav-arrows {
+  position:absolute;
+  bottom: calc(56px + env(safe-area-inset-bottom,0));
+  left:50%; transform:translateX(-50%);
+  display:flex; gap:12px;
+}
+.nav-btn {
+  width:40px; height:40px;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.04);
+  color:rgba(255,255,255,0.4);
+  font-size:1rem;
+  cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+.nav-btn:active { background:rgba(255,255,255,0.12); }
+
+/* Responsive font scaling */
+:root {
+  --sub-prev-size: 1rem;
+  --sub-curr-size: 1.6rem;
+  --sub-next-size: 1rem;
+}
+@media (min-width:480px) {
+  :root { --sub-prev-size:1.15rem; --sub-curr-size:1.9rem; --sub-next-size:1.15rem; }
+}
+@media (min-width:768px) {
+  :root { --sub-prev-size:1.35rem; --sub-curr-size:2.3rem; --sub-next-size:1.35rem; }
+}
+@media (min-width:1024px) {
+  :root { --sub-prev-size:1.55rem; --sub-curr-size:2.7rem; --sub-next-size:1.55rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════
+     SCREEN 1: INSERCIÓN DE GUIÓN
+══════════════════════════════ -->
+<div class="screen" id="screen-insert">
+<div class="insert-inner">
+
+  <div class="top-bar">
+    <div>
+      <div class="brand">Teleprónter</div>
+      <div class="brand-sub">Estilo subtítulos automáticos</div>
+    </div>
+    <button class="example-btn" onclick="cargarEjemplo()">Ver ejemplo</button>
+  </div>
+
+  <div class="no-speech" id="no-speech-warn">
+    ⚠️ Usa <strong>Google Chrome</strong> (Android/PC) o <strong>Safari</strong> (iPhone/iPad) para que funcione el seguimiento de voz.
+  </div>
+
+  <div class="input-card">
+    <div class="input-label">Escribe o pega tu guión</div>
+    <textarea id="guion-input"
+      placeholder="Pega aquí tu discurso o presentación...&#10;&#10;El teleprónter mostrará 3 líneas a la vez — como subtítulos — y resaltará automáticamente la frase que estás diciendo. Siempre verás la frase anterior y la siguiente."></textarea>
+    <div class="char-info">
+      <span id="char-count">0 caracteres</span>
+      <span id="word-count">0 palabras</span>
+    </div>
+  </div>
+
+  <div class="options-row">
+    <div class="option-item">
+      <div>
+        <div class="option-label">Mostrar transcripción en vivo</div>
+        <div class="option-sub">Muestra lo que el micrófono está captando</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="opt-transcript" checked><div class="toggle-track"></div></label>
+    </div>
+    <div class="option-item">
+      <div>
+        <div class="option-label">Avance manual con flechas</div>
+        <div class="option-sub">Botones ← → para avanzar a mano si es necesario</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="opt-arrows" checked><div class="toggle-track"></div></label>
+    </div>
+  </div>
+
+  <div class="slider-row">
+    <label>Sensibilidad</label>
+    <input type="range" id="sensitivity" min="1" max="5" value="3">
+    <span class="slider-val" id="sens-val">3</span>
+  </div>
+
+  <div class="cta-area">
+    <button class="btn-cta" onclick="iniciarPrompter()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="7"/></svg>
+      Iniciar teleprónter
+    </button>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════
+     SCREEN 2: TELEPRÓNTER
+══════════════════════════════ -->
+<div class="screen hidden" id="screen-prompter">
+
+  <div class="prompter-header">
+    <div class="ph-left">
+      <button class="back-btn" onclick="volver()">←</button>
+      <div class="ph-status">
+        <div class="ph-dot" id="ph-dot"></div>
+        <span id="ph-status-txt">Listo</span>
+      </div>
+    </div>
+    <div class="ph-right">
+      <div class="font-ctrl">
+        <button class="font-btn" onclick="cambiarFuente(-1)">A−</button>
+        <button class="font-btn" onclick="cambiarFuente(+1)">A+</button>
+      </div>
+      <button class="ph-btn primary" id="btn-escuchar" onclick="toggleEscucha()">▶ Escuchar</button>
+      <button class="ph-btn" id="btn-reiniciar" onclick="reiniciar()" style="display:none">↺</button>
+    </div>
+  </div>
+
+  <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+
+  <div class="subtitle-stage">
+
+    <div class="seg-counter" id="seg-counter"></div>
+
+    <div class="conf-bar" id="conf-bar" style="display:none">
+      <div class="cdot" id="cd1"></div><div class="cdot" id="cd2"></div>
+      <div class="cdot" id="cd3"></div><div class="cdot" id="cd4"></div>
+      <div class="cdot" id="cd5"></div>
+    </div>
+
+    <!-- 3 subtitle rows -->
+    <div class="sub-rows" id="sub-rows">
+      <div class="sub-empty" id="sub-empty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+          <path d="M12 18.5A6.5 6.5 0 1 0 12 5.5a6.5 6.5 0 0 0 0 13Z"/>
+          <path d="M9 12h6M12 9v6"/>
+        </svg>
+        Tu guión aparecerá aquí<br>como subtítulos en vivo
+      </div>
+      <div class="sub-row prev" id="row-prev"></div>
+      <div class="sub-row curr" id="row-curr"></div>
+      <div class="sub-row next" id="row-next"></div>
+    </div>
+
+    <!-- Manual nav arrows -->
+    <div class="nav-arrows" id="nav-arrows" style="display:none">
+      <button class="nav-btn" onclick="moverSeg(-1)">‹</button>
+      <button class="nav-btn" onclick="moverSeg(+1)">›</button>
+    </div>
+
+    <div class="transcript-bar off" id="transcript-bar">
+      <em>🎙</em> <span id="transcript-txt">—</span>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════
+// STATE
+// ═══════════════════════
+let segments = [];
+let currentSeg = 0;
+let recognition = null;
+let escuchando = false;
+let fullTranscript = '';
+let fontMult = 1;
+
+const DEBOUNCE_MS = 700; // min ms between segment jumps
+
+// ═══════════════════════
+// SPEECH CHECK
+// ═══════════════════════
+const hasSpeech = ('webkitSpeechRecognition' in window) || ('SpeechRecognition' in window);
+if (!hasSpeech) document.getElementById('no-speech-warn').style.display = 'block';
+
+// ═══════════════════════
+// INSERT SCREEN HELPERS
+// ═══════════════════════
+const guionInput = document.getElementById('guion-input');
+guionInput.addEventListener('input', () => {
+  const v = guionInput.value;
+  document.getElementById('char-count').textContent = v.length.toLocaleString() + ' car.';
+  document.getElementById('word-count').textContent = (v.trim() ? v.trim().split(/\s+/).length : 0) + ' palabras';
+});
+
+document.getElementById('sensitivity').addEventListener('input', function() {
+  document.getElementById('sens-val').textContent = this.value;
+});
+
+function cargarEjemplo() {
+  guionInput.value = `Buenas tardes a todos. Es un honor estar aquí con ustedes hoy.
+Quiero hablarles sobre algo que nos afecta profundamente: la manera en que nos comunicamos.
+En un mundo lleno de ruido y distracciones, la claridad se ha convertido en un superpoder.
+El primer principio es escuchar de verdad. No solo oír las palabras, sino entender lo que hay detrás de ellas.
+El segundo principio es ser concreto. Las ideas abstractas se olvidan; las historias concretas permanecen.
+El tercer principio es la autenticidad. Las personas no siguen a quienes son perfectos, sino a quienes son genuinos.
+Para cerrar, les dejo con esta reflexión: cada conversación es una oportunidad de construir algo o de destruirlo.
+Elijamos construir. Muchas gracias.`;
+  guionInput.dispatchEvent(new Event('input'));
+}
+
+// ═══════════════════════
+// BUILD SEGMENTS
+// ═══════════════════════
+function normalize(str) {
+  return str.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9\s]/g,'').trim();
+}
+
+function buildSegments(raw) {
+  // Split by newlines first, then by sentence-ending punctuation
+  return raw
+    .split(/\n+/)
+    .flatMap(line => line.split(/(?<=[.!?])\s+/))
+    .map(s => s.trim())
+    .filter(s => s.length > 2);
+}
+
+// ═══════════════════════
+// SUBTITLE DISPLAY
+// ═══════════════════════
+function getSegText(idx) {
+  if (idx < 0 || idx >= segments.length) return '';
+  return segments[idx].text;
+}
+
+let animTimeout = null;
+
+function renderSubtitles(idx, animate) {
+  const rows = document.getElementById('sub-rows');
+  const empty = document.getElementById('sub-empty');
+  const prev = document.getElementById('row-prev');
+  const curr = document.getElementById('row-curr');
+  const next = document.getElementById('row-next');
+
+  empty.style.display = 'none';
+  prev.style.display = '';
+  curr.style.display = '';
+  next.style.display = '';
+
+  prev.textContent = getSegText(idx - 1);
+  curr.textContent = getSegText(idx);
+  next.textContent = getSegText(idx + 1);
+
+  // Counter
+  document.getElementById('seg-counter').textContent =
+    (idx + 1) + ' / ' + segments.length;
+
+  // Progress
+  const pct = segments.length > 1 ? (idx / (segments.length - 1)) * 100 : 100;
+  document.getElementById('prog-fill').style.width = pct + '%';
+
+  if (animate) {
+    rows.classList.remove('animating');
+    void rows.offsetWidth; // reflow
+    rows.classList.add('animating');
+    clearTimeout(animTimeout);
+    animTimeout = setTimeout(() => rows.classList.remove('animating'), 350);
+  }
+}
+
+function destacar(idx, animate = true) {
+  if (idx < 0 || idx >= segments.length) return;
+  if (idx !== currentSeg) currentSegCoverage = 0; // reset gate for new segment
+  currentSeg = idx;
+  renderSubtitles(idx, animate);
+}
+
+// ═══════════════════════
+// MATCHING — FUZZY + GATE
+// ═══════════════════════
+
+// Track how much of the current segment has been "covered"
+let currentSegCoverage = 0; // 0.0 → 1.0
+
+// Phonetic simplification for Spanish — collapses common sound-alike groups
+function phoneticES(w) {
+  return w
+    .replace(/qu/g, 'k')
+    .replace(/c([ei])/g, 's$1')
+    .replace(/z/g, 's')
+    .replace(/v/g, 'b')
+    .replace(/ll/g, 'y')
+    .replace(/ción/g, 'sion')
+    .replace(/x/g, 'ks')
+    .replace(/h/g, '')            // silent h
+    .replace(/gue|gui/g, 'ge')
+    .replace(/([aeiou])\1+/g,'$1') // collapse double vowels
+    .replace(/([^aeiou])\1+/g,'$1'); // collapse double consonants
+}
+
+// Fuzzy word match: exact, phonetic, or prefix/suffix overlap
+function wordSim(a, b) {
+  if (a === b) return 1;
+  const pa = phoneticES(a), pb = phoneticES(b);
+  if (pa === pb) return 0.9;
+  // One is prefix of the other (handles cut-off words mid-speech)
+  const short = a.length < b.length ? a : b;
+  const long  = a.length < b.length ? b : a;
+  if (short.length >= 3 && long.startsWith(short)) return 0.75;
+  // Shared prefix of at least 4 chars
+  let shared = 0;
+  for (let i = 0; i < Math.min(a.length, b.length); i++) {
+    if (a[i] === b[i]) shared++; else break;
+  }
+  if (shared >= 4) return 0.6;
+  return 0;
+}
+
+// Score how well a bag of spoken words matches a segment
+// Uses best-assignment: each spoken word picks its best match in the segment
+function segmentScore(spokenWords, segWords) {
+  if (!spokenWords.length || !segWords.length) return 0;
+  let totalSim = 0;
+  for (const sw of spokenWords) {
+    let best = 0;
+    for (const tw of segWords) {
+      const s = wordSim(sw, tw);
+      if (s > best) best = s;
+    }
+    totalSim += best;
+  }
+  // Normalise: penalise if spoken words >> segment words (avoids spillover)
+  return totalSim / Math.max(spokenWords.length, segWords.length);
+}
+
+// How much of the segment's key words appear in the full spoken window
+function coverageScore(spokenWords, segWords) {
+  if (!segWords.length) return 0;
+  // Only measure against "content" words (length ≥ 3) to skip filler
+  const content = segWords.filter(w => w.length >= 3);
+  if (!content.length) return 0;
+  let found = 0;
+  for (const tw of content) {
+    for (const sw of spokenWords) {
+      if (wordSim(sw, tw) >= 0.7) { found++; break; }
+    }
+  }
+  return found / content.length;
+}
+
+// Timestamp of last confirmed segment advance
+let lastAdvanceTime = 0;
+
+function findMatch(transcript, rescueMode) {
+  const normT = normalize(transcript);
+  const allWords = normT.split(/\s+/).filter(Boolean);
+  if (allWords.length < 2) return -1;
+
+  const sens = parseInt(document.getElementById('sensitivity').value);
+  const matchThreshold = [0.35, 0.27, 0.19, 0.12, 0.07][sens - 1];
+  const gateThreshold  = [0.65, 0.55, 0.42, 0.30, 0.18][sens - 1];
+
+  const wSize = Math.min(10, allWords.length);
+  const recentWords = allWords.slice(-wSize);
+
+  // ── RESCUE MODE: program got stuck, search broadly ──
+  if (rescueMode) {
+    const bigWindow = Math.min(20, allWords.length);
+    const bigWords  = allWords.slice(-bigWindow);
+    let bestScore = 0, bestIdx = -1;
+    for (let i = currentSeg + 1; i < segments.length; i++) {
+      const s = segmentScore(bigWords, segments[i].words);
+      if (s > bestScore) { bestScore = s; bestIdx = i; }
+    }
+    const rescueThreshold = matchThreshold * 1.4;
+    if (bestIdx !== -1 && bestScore >= rescueThreshold) {
+      updateConf(bestScore);
+      return bestIdx;
+    }
+    return currentSeg;
+  }
+
+  // ── NORMAL MODE ──
+  const currSeg = segments[currentSeg];
+  const currScore = segmentScore(recentWords, currSeg.words);
+
+  const newCoverage = coverageScore(allWords, currSeg.words);
+  if (newCoverage > currentSegCoverage) currentSegCoverage = newCoverage;
+
+  updateConf(Math.max(currScore, currentSegCoverage));
+
+  const canAdvance = currentSegCoverage >= gateThreshold;
+  const lookahead  = canAdvance ? 3 : 1;
+  const to = Math.min(segments.length - 1, currentSeg + lookahead);
+
+  let bestScore = currScore;
+  let bestIdx   = currentSeg;
+
+  for (let i = currentSeg + 1; i <= to; i++) {
+    const s = segmentScore(recentWords, segments[i].words);
+    if (s > bestScore) { bestScore = s; bestIdx = i; }
+  }
+
+  if (bestIdx > currentSeg && bestScore >= matchThreshold && canAdvance) {
+    return bestIdx;
+  }
+
+  if (currScore >= matchThreshold * 0.6) return currentSeg;
+  return -1;
+}
+
+function updateConf(score) {
+  const filled = Math.round(score * 5);
+  [1,2,3,4,5].forEach(i => {
+    document.getElementById('cd' + i).classList.toggle('on', i <= filled);
+  });
+}
+
+// ═══════════════════════
+// SPEECH RECOGNITION
+// ═══════════════════════
+function toggleEscucha() {
+  escuchando ? pararEscucha() : empezarEscucha();
+}
+
+function empezarEscucha() {
+  if (!hasSpeech) {
+    alert('Tu navegador no soporta reconocimiento de voz.\nUsa Google Chrome o Safari.');
+    return;
+  }
+  escuchando = true;
+  document.getElementById('btn-escuchar').textContent = '⏸ Pausar';
+  document.getElementById('btn-escuchar').className = 'ph-btn';
+  document.getElementById('btn-reiniciar').style.display = 'flex';
+  document.getElementById('conf-bar').style.display = 'flex';
+  if (document.getElementById('opt-transcript').checked)
+    document.getElementById('transcript-bar').classList.remove('off');
+  setDot('on', 'Escuchando…');
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = 'es-ES';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  recognition.onresult = (e) => {
+    let interim = '', final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) { final += t; fullTranscript += ' ' + t; }
+      else interim += t;
+    }
+
+    const display = (interim || final).trim();
+    if (document.getElementById('opt-transcript').checked)
+      document.getElementById('transcript-txt').textContent = display || '—';
+
+    const combined = fullTranscript + ' ' + interim;
+    const now = Date.now();
+
+    // Detect if program is lagging: stuck on same segment too long while speech keeps coming
+    const stuckMs = 4500;
+    const isStuck = lastAdvanceTime > 0 && (now - lastAdvanceTime) > stuckMs;
+
+    const match = findMatch(combined, isStuck);
+
+    if (match !== -1 && match > currentSeg) {
+      lastAdvanceTime = now;
+      destacar(match, true);
+    } else if (lastAdvanceTime === 0) {
+      lastAdvanceTime = now; // start clock on first result
+    }
+  };
+
+  recognition.onerror = (e) => {
+    if (e.error === 'not-allowed') {
+      alert('Permiso de micrófono denegado.\nActívalo en la configuración del navegador.');
+      pararEscucha();
+    }
+  };
+
+  recognition.onend = () => { if (escuchando) recognition.start(); };
+  recognition.start();
+
+  if (navigator.wakeLock) navigator.wakeLock.request('screen').catch(() => {});
+}
+
+function pararEscucha() {
+  escuchando = false;
+  if (recognition) { recognition.stop(); recognition = null; }
+  document.getElementById('btn-escuchar').textContent = '▶ Continuar';
+  document.getElementById('btn-escuchar').className = 'ph-btn primary';
+  document.getElementById('transcript-bar').classList.add('off');
+  setDot('pause', 'Pausado');
+}
+
+function setDot(type, txt) {
+  document.getElementById('ph-dot').className = 'ph-dot ' + type;
+  document.getElementById('ph-status-txt').textContent = txt;
+}
+
+// ═══════════════════════
+// MANUAL NAV
+// ═══════════════════════
+function moverSeg(delta) {
+  const next = Math.max(0, Math.min(segments.length - 1, currentSeg + delta));
+  if (next !== currentSeg) {
+    lastAdvanceTime = Date.now(); // reset lag clock on manual advance
+    destacar(next, true);
+  }
+}
+
+// Keyboard arrows (desktop)
+document.addEventListener('keydown', e => {
+  if (document.getElementById('screen-prompter').classList.contains('hidden')) return;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') moverSeg(1);
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   moverSeg(-1);
+  if (e.key === ' ') { e.preventDefault(); toggleEscucha(); }
+});
+
+// ═══════════════════════
+// FONT SIZE
+// ═══════════════════════
+function cambiarFuente(delta) {
+  fontMult = Math.max(0.55, Math.min(2.0, fontMult + delta * 0.12));
+  const base = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sub-curr-size'));
+  // Apply via inline override
+  const stage = document.querySelector('.subtitle-stage');
+  const w = window.innerWidth;
+  let curr, prev;
+  if (w <= 480)      { curr = 1.6; prev = 1.0; }
+  else if (w <= 768) { curr = 1.9; prev = 1.15; }
+  else if (w <= 1024){ curr = 2.3; prev = 1.35; }
+  else               { curr = 2.7; prev = 1.55; }
+  document.documentElement.style.setProperty('--sub-curr-size', (curr * fontMult) + 'rem');
+  document.documentElement.style.setProperty('--sub-prev-size', (prev * fontMult) + 'rem');
+  document.documentElement.style.setProperty('--sub-next-size', (prev * fontMult) + 'rem');
+}
+
+// ═══════════════════════
+// START / RESET / BACK
+// ═══════════════════════
+function iniciarPrompter() {
+  const raw = guionInput.value.trim();
+  if (!raw) { guionInput.focus(); return; }
+
+  const partes = buildSegments(raw);
+  if (!partes.length) return;
+
+  segments = partes.map(text => {
+    const norm = normalize(text);
+    return { text, norm, words: norm.split(/\s+/).filter(Boolean) };
+  });
+  currentSeg = 0;
+  fullTranscript = '';
+  escuchando = false;
+  lastAdvanceTime = 0;
+  currentSegCoverage = 0;
+
+  // Reset UI
+  document.getElementById('prog-fill').style.width = '0%';
+  document.getElementById('btn-escuchar').textContent = '▶ Escuchar';
+  document.getElementById('btn-escuchar').className = 'ph-btn primary';
+  document.getElementById('btn-reiniciar').style.display = 'none';
+  document.getElementById('conf-bar').style.display = 'none';
+  document.getElementById('transcript-bar').classList.add('off');
+
+  // Show/hide arrows
+  const showArrows = document.getElementById('opt-arrows').checked;
+  document.getElementById('nav-arrows').style.display = showArrows ? 'flex' : 'none';
+
+  // Show rows, hide empty
+  document.getElementById('sub-empty').style.display = 'none';
+  document.getElementById('row-prev').style.display = '';
+  document.getElementById('row-curr').style.display = '';
+  document.getElementById('row-next').style.display = '';
+
+  setDot('', 'Listo');
+  renderSubtitles(0, false);
+  mostrarPantalla('screen-prompter');
+}
+
+function reiniciar() {
+  pararEscucha();
+  fullTranscript = '';
+  lastAdvanceTime = 0;
+  currentSegCoverage = 0;
+  destacar(0, false);
+  document.getElementById('btn-reiniciar').style.display = 'none';
+  document.getElementById('conf-bar').style.display = 'none';
+  document.getElementById('btn-escuchar').textContent = '▶ Escuchar';
+  document.getElementById('btn-escuchar').className = 'ph-btn primary';
+  setDot('', 'Listo');
+}
+
+function volver() {
+  pararEscucha();
+  mostrarPantalla('screen-insert');
+}
+
+function mostrarPantalla(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+</script>
+</body>
+</html>
